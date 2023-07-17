@@ -12,6 +12,8 @@ const SCOPES = ['https://www.googleapis.com/auth/drive.metadata.readonly'];
 const TOKEN_PATH = path.join(process.cwd(), 'token.json');
 const CREDENTIALS_PATH = path.join(process.cwd(), 'credentials.json');
 
+var pictureIdList = []
+
 /**
  * Reads previously authorized credentials from the save file.
  *
@@ -72,8 +74,8 @@ async function authorize() {
 async function listFiles(authClient) {
   const drive = google.drive({version: 'v3', auth: authClient});
   const folderId = "1--HiUNTjdX7M_BxIQpF3SlrZoTFCTMdW"
+  //検索クエリとしてfolderIdをいれる、andで複数条件、minetypeも指定できる
   const res = await drive.files.list({
-    pageSize: 10,
     q: `'${folderId}' in parents`,
     fields: 'nextPageToken, files(id, name)',
   });
@@ -83,10 +85,12 @@ async function listFiles(authClient) {
     return;
   }
 
-  console.log('Files:');
+  console.log('Making pictureIdList...');
+  
   files.map((file) => {
-    console.log(`${file.name} (${file.id})`);
+    pictureIdList.push(file.id)
   });
+  console.log(pictureIdList)
 }
 
 authorize().then(listFiles).catch(console.error);
