@@ -71,8 +71,10 @@ async function authorize() {
  */
 async function listFiles(authClient) {
   const drive = google.drive({version: 'v3', auth: authClient});
+  const folderId = "1--HiUNTjdX7M_BxIQpF3SlrZoTFCTMdW"
   const res = await drive.files.list({
     pageSize: 10,
+    q: `'${folderId}' in parents`,
     fields: 'nextPageToken, files(id, name)',
   });
   const files = res.data.files;
