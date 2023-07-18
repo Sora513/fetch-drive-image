@@ -1,8 +1,10 @@
 const fs = require('fs').promises;
 const path = require('path');
 const process = require('process');
-const {authenticate} = require('@google-cloud/local-auth');
-const {google} = require('googleapis');
+const { authenticate } = require('@google-cloud/local-auth');
+const { google } = require('googleapis');
+const { createWriteStream } = require("fs")
+
 
 // If modifying these scopes, delete token.json.
 const SCOPES = ['https://www.googleapis.com/auth/drive.metadata.readonly'];
@@ -72,9 +74,9 @@ async function authorize() {
  * @param {OAuth2Client} authClient An authorized OAuth2 client.
  */
 async function listFiles(authClient) {
-  const drive = google.drive({version: 'v3', auth: authClient});
+  const drive = google.drive({ version: 'v3', auth: authClient });
   const folderId = "1--HiUNTjdX7M_BxIQpF3SlrZoTFCTMdW"
-  //検索クエリとしてfolderIdをいれる、andで複数条件、minetypeも指定できる
+  //検索クエリとしてfolderIdをいれる、andで複数条件、mimetypeも指定できる
   const res = await drive.files.list({
     q: `'${folderId}' in parents`,
     fields: 'nextPageToken, files(id, name)',
@@ -86,11 +88,67 @@ async function listFiles(authClient) {
   }
 
   console.log('Making pictureIdList...');
-  
+
   files.map((file) => {
-    pictureIdList.push(file.id)
+    pictureIdList.push({
+      id: file.id,
+      name: file.name
+    })
   });
   console.log(pictureIdList)
+
+  const dest = createWriteStream("./image/" + "Hello.png")
+  try {
+    const res = await drive.files.get(
+      {
+        fileId: "1-NCRLHMtDGtOg6JzlaYJTG1_8bpDevgc",
+        alt: "media"
+      }, {
+      responseType: "stream"
+    }
+    )
+    res.data.on("data", chunk => dest.write(chunk))
+    res.data.on("end", () => dest.end())
+  } catch (err) {
+    console.error(err)
+  }
+
+  drive.files.get({
+    fileId: "1-NCRLHMtDGtOg6JzlaYJTG1_8bpDevgc",
+    alt: "media"
+  }, {
+    responseType: "arraybuffer"
+  }
+  ).on("end", () => {
+    console.log("done")
+  }).on("error", (err) => {
+    console.error(err)
+  }).pipe(dest)
 }
 
-authorize().then(listFiles).catch(console.error);
+
+async function getImage(authClient) {
+  const drive = google.drive({ version: 'v3', auth: authClient });
+
+
+
+
+  // pictureIdList.map((file) => {
+  //   const dest = createWriteStream("./image/" + file.name)
+  //   drive.files.get({
+  //     fileId: file.id,
+  //     alt: "media"
+  //   }, {
+  //     responseType: "arraybuffer"
+  //   },
+  //     (err, res) => {
+  //       if(err){
+  //         console.error(err)
+  //       }
+  //       dest.write(Buffer.from(res.data))
+  //     }
+  //   )
+  // })
+}
+
+authorize().then(listFiles).then(getImage).catch(console.error);
